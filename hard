@@ -1,0 +1,53 @@
+--HARD
+
+--Monthly Percentage Difference
+select to_char(created_at::date, 'YYYY-MM') as year_month,
+        round((sum(value) - lag(sum(value),1) over (w)) /
+        lag(sum(value),1) over (w)*100, 2) as revenue_diff
+From sf_transactions
+group by year_month
+window w as (order by to_char(created_at::date, 'YYYY-MM'));
+
+--Premium vs Freemium
+select date,
+sum(case when paying_customer = 'no' then downloads end) as non_pay_dl,
+sum(case when paying_customer = 'yes' then downloads end) as pay_dl
+from ms_user_dimension as u
+join ms_acc_dimension as a
+on u.acc_id = a.acc_id
+join ms_download_facts as d
+on u.user_id = d.user_id
+group by date
+having
+sum(case when paying_customer = 'no' then downloads end) >
+sum(case when paying_customer = 'yes' then downloads end)
+order by date asc;
+
+--Popularity Percentage
+select new.user, sum(new.num_fri)/9*100 as popularity
+from
+((select user1 as user, count(user1) as num_fri
+from facebook_friends f1
+group by 1
+order by 2 desc)
+union
+(select user2 as user, count(user2) as num_fri
+from facebook_friends f2
+group by 1
+order by 2 desc)) as new
+group by 1
+order by 2 desc;
+
+--Counting Instances in Text
+select 'bull', sum(case when contents like '% bull %' then 1 else 0 end)
+from google_file_store
+union
+select 'bear', sum(case when contents like '% bear %' then 1 else 0 end)
+from google_file_store
+
+--Top 5 States With 5 Star Businesses
+select distinct state, count(state) from yelp_business
+where stars = 5
+group by state
+order by 2 desc, 1 asc
+limit 6;
